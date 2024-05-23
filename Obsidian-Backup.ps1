@@ -1,12 +1,11 @@
 <#
 .SYNOPSIS
-Script de compression utilisant 7zip pour créer une archive à partir de plusieurs dossiers.
-Il 
-
+Script de compression utilisant 7zip pour créer une archive à partir de plusieurs dossiers.  
 
 .DESCRIPTION
 Ce script PowerShell utilise l'outil 7zip pour compresser les contenus de plusieurs dossiers
 dans une archive au format 7z. L'archive porte un nom basé sur la date de création du script.
+Le script peut vérifier les archives créées et supprimer les archives les plus anciennes et en conserver un nombre max
 
 .PARAMETER FolderPaths
 Les chemins vers les dossiers à compresser.
@@ -16,59 +15,56 @@ Les chemins vers les dossiers à compresser.
 
 .NOTES
 Auteur : Stéphane Lopez avec l'aide de chatGPT
-Date de création : 2023-08/28
+Date de création : 2023-08-28
 Date de maj : 2024-05
 Version : 2.0
 #>
 
-### Paramétrages obligatoires ###
-# Chemins vers les dossiers que à compresser
-$folderPaths = @("C:\Users\s.lopez\OneDrive\90-Documents - stephane@simplixite.fr\Obsidian-Test-Vault\Test de Vault")
+param (
+    [Parameter(Mandatory = $false)]
+    [string[]]$FolderPaths = @("C:\Users\s.lopez\OneDrive\90-Documents - stephane@simplixite.fr\Obsidian-Test-Vault\Test de Vault"),
+    [string]$ArchiveFolder = "C:\Temp\backup\",
+    [string]$7zipPath = (Get-Command 7z.exe).Source,
+    [int]$ArchivesToKeep = 3,
+    [bool]$Verif = $true,
+    [bool]$Log = $true,
+    [string]$FolderLog = "C:\Users\s.lopez\Documents\Partage-Obsidian\ZZZ-Test\Backup\"
+)
 
-# Chemin vers le dossier contenant les archives
-$archiveFolder = "C:\Temp\backup\"
-
-### Paramétrages facultatifs ### 
-# Chemin vers l'exécutable 7zip dans le path (ou manuellement) 
-$7zipPath = (Get-Command 7z.exe).source  # $7zipPath = "C:\path\to\7z.exe"
-
-# Nom des archives générés
+# Nom des archives générées
 $archiveDate = Get-Date -Format "yyyy-MM-dd"
 $archiveName = "Obsidian-Backup-$archiveDate.7z"
-
-# Vérification de l'archive généré (ou pas) 
-$verif = $true
-
-# Nombre d'archives à conserver
-$archivesToKeep = 3
+$archivePath = Join-Path -Path $ArchiveFolder -ChildPath $archiveName
 
 # Log des opérations
-$log = $true
-$folderLog = "C:\Users\s.lopez\Documents\Partage-Obsidian\ZZZ-Test\Backup\"
 $logNote = "Obsidian-backup-log.md"
 $logLastBackupFile = "LastBackupLog.md"
+$logPathTasks = Join-Path -Path $FolderLog -ChildPath $logNote
+$lastBackupLogFile = Join-Path -Path $FolderLog -ChildPath $logLastBackupFile
 
-# Concaténation des chemins 
-$logPathTasks = $folderLog+ $logNote                    # Log regroupé pour le suivi dans Obsidian
-$lastBackupLogFile = $folderLog+$logLastBackupFile      # Log du dernier job d'archivage pour savoir ce qui c'est passé en cas de souci
-$archivePath = $archiveFolder + $archiveName            # Chemin complet vers l'emplacement où l'archive sera créée
+# Vérifier si les dossiers existent
+foreach ($folderPath in $FolderPaths) {
+    if (-Not (Test-Path -Path $folderPath -PathType Container)) {
+        Write-Error "Le dossier $folderPath n'existe pas."
+        exit 1
+    }
+}
 
-### Compresser les dossiers dans une archive au format 7z
-$logLastBackup = & $7zipPath a -t7z $archivePath $folderPaths  
+# Compresser les dossiers dans une archive au format 7z
+$logLastBackup = & $7zipPath a -t7z $archivePath $FolderPaths
 
-if ($?  ){
+if ($?) {
     $logstring = "- [x] 🤖 [[$archiveDate]] - Backup de [$archiveName](file:\\$archivePath) 🆗|[[$logLastBackupFile|🗒️]]"
-}else{
+} else {
     $logstring = "- [-] 🤖 [[$archiveDate]] - Backup de [$archiveName](file:\\$archivePath) ❌|[[$logLastBackupFile|🗒️]]"
 }
 
-
-### Verification de l'archive créé
-if ($verif){
+# Vérification de l'archive créée
+if ($Verif) {
     & $7zipPath t $archivePath
-    if ($?){
+    if ($?) {
         $logstring += " | Vérification 🆗"
-    }else{
+    } else {
         $logstring += " | Vérification ❌"
     }
 }
@@ -77,34 +73,29 @@ Write-Host $logLastBackup
 Write-Host "Archive créée : $archivePath"
 Write-Host $logstring
 
+# Suppression des anciennes archives
+$archives = Get-ChildItem -Path $ArchiveFolder -Filter "*.7z" | Sort-Object LastWriteTime -Descending
 
+if ($archives.Count -gt $ArchivesToKeep) {
+    $archivesToDelete = $archives.Count - $ArchivesToKeep
 
-### Suppression des anciennes archives
-# Liste toutes les archives dans le dossier d'archive
-$archives = Get-ChildItem -Path $archiveFolder -Filter $archiveBaseName"*.7z" | Sort-Object LastWriteTime -Descending
-
-# Vérifie s'il y a plus d'archives que celles à conserver
-if ($archives.Count -gt $archivesToKeep) {
-    # Calcule le nombre d'archives à supprimer
-    $archivesToDelete = $archives.Count - $archivesToKeep
-
-    # Supprime les archives excédentaires
     for ($i = 0; $i -lt $archivesToDelete; $i++) {
-        $archiveToDelete = $archives[$archivesToKeep + $i]
+        $archiveToDelete = $archives[$ArchivesToKeep + $i]
         Remove-Item -Path $archiveToDelete.FullName -Force
         Write-Host "Archive supprimée : $($archiveToDelete.Name)"
         $logLastBackup += "Archive supprimée : $($archiveToDelete.Name)"
-
     }
 
     $logstring += "suppression de $i / $($archives.Count)  ✅ $archiveDate `n"
-
 } else {
     $logstring += "| suppression de 0 / $($archives.Count)  ✅ $archiveDate `n"
     Write-Host "Nombre d'archives insuffisant. Aucune suppression nécessaire."
 }
 
-if ($log){
+if ($Log) {
     Add-Content -Path $logPathTasks -Value $logstring
     Add-Content -Path $lastBackupLogFile -Value $logLastBackup
 }
+
+
+
