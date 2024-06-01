@@ -22,18 +22,19 @@ Version : 2.0
 
 param (
     [Parameter(Mandatory = $false)]
-    [string[]]$FolderPaths = @("C:\Users\s.lopez\OneDrive\90-Documents - stephane@simplixite.fr\Obsidian-Test-Vault\Test de Vault"),
-    [string]$ArchiveFolder = "C:\Temp\backup\",
+    [string]$BackupName = "Obsidian-Backup",
+    [string[]]$FolderPaths = @("C:\Users\Steph\OneDrive\Documents\Dossier du coffre\Nouveau-Coffre"),
+    [string]$ArchiveFolder = "C:\Users\Steph\OneDrive\backup",
     [string]$7zipPath = (Get-Command 7z.exe).Source,
     [int]$ArchivesToKeep = 3,
     [bool]$Verif = $true,
     [bool]$Log = $true,
-    [string]$FolderLog = "C:\Users\s.lopez\Documents\Partage-Obsidian\ZZZ-Test\Backup\"
+    [string]$FolderLog = "C:\Users\Steph\OneDrive\Documents\Dossier du coffre\Nouveau-Coffre\backup"
 )
 
 # Nom des archives générées
 $archiveDate = Get-Date -Format "yyyy-MM-dd"
-$archiveName = "Obsidian-Backup-$archiveDate.7z"
+$archiveName = "$archiveDate-$BackupName.7z"
 $archivePath = Join-Path -Path $ArchiveFolder -ChildPath $archiveName
 
 # Log des opérations
