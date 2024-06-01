@@ -23,13 +23,13 @@ Version : 2.0
 param (
     [Parameter(Mandatory = $false)]
     [string]$BackupName = "Obsidian-Backup",
-    [string[]]$FolderPaths = @("C:\Users\Steph\OneDrive\Documents\Dossier du coffre\Nouveau-Coffre"),
-    [string]$ArchiveFolder = "C:\Users\Steph\OneDrive\backup",
+    [string[]]$FolderPaths = @("C:\SourceFolder1\To\Save"),
+    [string]$ArchiveFolder = "C:\Target\Backup\Folder",
     [string]$7zipPath = (Get-Command 7z.exe).Source,
     [int]$ArchivesToKeep = 3,
     [bool]$Verif = $true,
     [bool]$Log = $true,
-    [string]$FolderLog = "C:\Users\Steph\OneDrive\Documents\Dossier du coffre\Nouveau-Coffre\backup"
+    [string]$FolderLog = "C:\Obsidian\Vault\Log Backup Folder\"
 )
 
 # Nom des archives générées
